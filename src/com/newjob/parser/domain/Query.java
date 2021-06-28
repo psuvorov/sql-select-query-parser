@@ -54,6 +54,38 @@ public class Query {
         this.offset = offset;
     }
 
+    public List<Column> getColumns() {
+        return columns;
+    }
+
+    public List<Source> getFromSources() {
+        return fromSources;
+    }
+
+    public List<Join> getJoins() {
+        return joins;
+    }
+
+    public List<WhereClause> getWhereClauses() {
+        return whereClauses;
+    }
+
+    public List<String> getGroupByColumns() {
+        return groupByColumns;
+    }
+
+    public List<Sort> getSortColumns() {
+        return sortColumns;
+    }
+
+    public Integer getLimit() {
+        return limit;
+    }
+
+    public Integer getOffset() {
+        return offset;
+    }
+
     public String getInfo() {
         String spr = System.lineSeparator();
 

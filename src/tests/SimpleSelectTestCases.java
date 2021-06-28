@@ -1,0 +1,134 @@
+package tests;
+
+import com.newjob.parser.QueryParser;
+import com.newjob.parser.domain.Query;
+import com.newjob.parser.domain.enums.TermType;
+import com.newjob.parser.domain.terms.Column;
+import com.newjob.parser.exceptions.InvalidQueryFormatException;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+
+public class SimpleSelectTestCases {
+
+    @Test
+    public void query01() throws InvalidQueryFormatException {
+        // Simple selection of 3 columns
+
+        // Arrange
+        final String query = "select aa, bb, cc from table1";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Assert
+        assertEquals(3, res.getColumns().size());
+        assertEquals("aa", res.getColumns().get(0).getSimpleColumnTermName());
+        assertEquals("bb", res.getColumns().get(1).getSimpleColumnTermName());
+        assertEquals("cc", res.getColumns().get(2).getSimpleColumnTermName());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(0).getType());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(1).getType());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(2).getType());
+    }
+
+    @Test
+    public void query02() throws InvalidQueryFormatException {
+        // select all columns
+
+        // Arrange
+        final String query = "select * from table1";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Assert
+        assertEquals(1, res.getColumns().size());
+        assertEquals("*", res.getColumns().get(0).getSimpleColumnTermName());
+    }
+
+    @Test
+    public void query03() throws InvalidQueryFormatException {
+        // one simple column and one nested query in select statement
+
+        // Arrange
+        final String query = "select aa, (select avg(x) from table_with_x), cc from table1";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Assert
+        assertEquals(3, res.getColumns().size());
+        assertEquals("aa", res.getColumns().get(0).getSimpleColumnTermName());
+        assertEquals("cc", res.getColumns().get(2).getSimpleColumnTermName());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(0).getType());
+        assertEquals(TermType.SubQuery, res.getColumns().get(1).getType());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(2).getType());
+
+        assertEquals(1, res.getColumns().get(1).getSubQuery().getColumns().size());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(1).getSubQuery().getColumns().get(0).getType());
+        assertEquals("avg(x)", res.getColumns().get(1).getSubQuery().getColumns().get(0).getSimpleColumnTermName());
+    }
+
+    @Test
+    public void query04() throws InvalidQueryFormatException {
+        // one nested query in select statement and one simple column
+
+        // Arrange
+        final String query = "select (select avg(x) from table_with_x), cc from table1";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Assert
+        assertEquals(2, res.getColumns().size());
+        assertEquals("cc", res.getColumns().get(1).getSimpleColumnTermName());
+        assertEquals(TermType.SubQuery, res.getColumns().get(0).getType());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(1).getType());
+
+        assertEquals(1, res.getColumns().get(0).getSubQuery().getColumns().size());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(0).getSubQuery().getColumns().get(0).getType());
+        assertEquals("avg(x)", res.getColumns().get(0).getSubQuery().getColumns().get(0).getSimpleColumnTermName());
+    }
+
+    @Test
+    public void query05() throws InvalidQueryFormatException {
+        // 3 nested queries in select statement
+
+        // Arrange
+        final String query = "select (select (select (select avg(x) from inner_table_3) from inner_table_2) from inner_table_1) from table1";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Assert
+        assertEquals(1, res.getColumns().size());
+        assertEquals(TermType.SubQuery, res.getColumns().get(0).getType());
+
+        assertEquals(1, res.getColumns().get(0).getSubQuery().getColumns().size());
+        assertEquals(TermType.SubQuery, res.getColumns().get(0).getSubQuery().getColumns().get(0).getType());
+
+        assertEquals(1, res.getColumns().get(0).getSubQuery().getColumns().get(0).getSubQuery().getColumns().get(0).getSubQuery().getColumns().size());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(0).getSubQuery().getColumns().get(0).getSubQuery().getColumns().get(0).getSubQuery().getColumns().get(0).getType());
+    }
+
+    @Test
+    public void query06() throws InvalidQueryFormatException {
+        // Simple selection of 3 columns
+
+        // Arrange
+        final String query = "select table1.aa, bb as 'BbB', cc 'CCC' from table1";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Assert
+        assertEquals(3, res.getColumns().size());
+        assertEquals("table1.aa", res.getColumns().get(0).getSimpleColumnTermName());
+        assertEquals("bb as 'BbB'", res.getColumns().get(1).getSimpleColumnTermName());
+        assertEquals("cc 'CCC'", res.getColumns().get(2).getSimpleColumnTermName());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(0).getType());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(1).getType());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(2).getType());
+    }
+
+}

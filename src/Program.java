@@ -1,7 +1,7 @@
 import com.newjob.parser.QueryParser;
 import com.newjob.parser.domain.Query;
 import com.newjob.parser.exceptions.InvalidQueryFormatException;
-import tests.SampleQueries;
+import tests.ComplexTestCases;
 
 public class Program {
 
@@ -18,7 +18,7 @@ public class Program {
         try {
 //            Query res = QueryParser.parseQuery(sb.toString());
 //            Query res = (new QueryParser()).parseQuery(SampleQueries.Query5, true);
-            Query res = QueryParser.parseQuery(SampleQueries.Query5);
+            Query res = QueryParser.parseQuery(ComplexTestCases.Query5);
 
             System.out.println(res.getInfo());
         } catch (InvalidQueryFormatException e) {

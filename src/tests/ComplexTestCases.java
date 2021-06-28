@@ -1,6 +1,6 @@
 package tests;
 
-public class SampleQueries {
+public class ComplexTestCases {
 
     public final static String Query1 = "SELECT author.name, count(book.id), sum(book.cost) \n" +
             "FROM author \n" +

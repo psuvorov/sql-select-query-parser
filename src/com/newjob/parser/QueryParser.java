@@ -4,13 +4,18 @@ import com.newjob.parser.algo.BalancedBracketsChecker;
 import com.newjob.parser.algo.FindCorrespondingClosingBracket;
 import com.newjob.parser.domain.Query;
 import com.newjob.parser.domain.terms.Column;
+import com.newjob.parser.domain.terms.Source;
 import com.newjob.parser.exceptions.InvalidQueryFormatException;
+
+import java.util.Locale;
 
 public class QueryParser {
 
     private String rawQuery;
 
     private final Query resultQuery = new Query();
+
+    private String nextKeywordAfterSourceSection;
 
     private static final class Keywords {
         private static final String select = "select";
@@ -20,6 +25,7 @@ public class QueryParser {
         private static final String leftJoin = "left join";
         private static final String rightJoin = "right join";
         private static final String fullJoin = "full join";
+        private static final String on = "on";
         private static final String where = "where";
         private static final String orderBy = "order by";
         private static final String groupBy = "group by";
@@ -52,8 +58,7 @@ public class QueryParser {
                 .replaceAll("\\s+", " ")
                 .replace("( ", "(")
                 .replace(" )", ")")
-                .replaceAll(".from", ", from")
-                .toLowerCase();
+                .replaceAll(".from", ", from");
     }
 
     private void validate() throws InvalidQueryFormatException {
@@ -72,15 +77,18 @@ public class QueryParser {
     private void performParsing() throws InvalidQueryFormatException {
         System.out.println(rawQuery);
 
-        int sourceStartIdx = extractColumns();
+        int startIdx = Keywords.select.length() + 1;
 
-        System.out.println("");
+        int sourceStartIdx = extractColumns(startIdx);
+        int nextStatementStartIdx = extractSources(sourceStartIdx);
+
+
+
+
     }
 
     // Find all select members respective to the current level select statement
-    // If we find inner select,
-    private int extractColumns() throws InvalidQueryFormatException {
-        int startIdx = Keywords.select.length() + 1;
+    private int extractColumns(int startIdx) throws InvalidQueryFormatException {
 
         for (int i = startIdx; i < rawQuery.length(); i++) {
             char c = rawQuery.charAt(i);
@@ -88,7 +96,7 @@ public class QueryParser {
                 continue;
 
             if (c != '(') {
-                if (rawQuery.substring(i, i + Keywords.from.length()).equals(Keywords.from)) {
+                if (rawQuery.substring(i, i + Keywords.from.length()).equalsIgnoreCase(Keywords.from)) {
                     // From keyword reached
                     return  i + Keywords.from.length() + 1;
                 } else {
@@ -100,7 +108,7 @@ public class QueryParser {
                     resultQuery.addColumn(new Column(simpleColumnTerm));
                     i = j + 1;
                 }
-            } else if ((i + 1) + Keywords.select.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.select.length()).equals(Keywords.select)) {
+            } else if ((i + 1) + Keywords.select.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.select.length()).equalsIgnoreCase(Keywords.select)) {
                 // Check whether it's a subquery
 
                 int closingBracketIdx = FindCorrespondingClosingBracket.find(rawQuery, i, '(');
@@ -109,15 +117,71 @@ public class QueryParser {
                 try {
                     // Then set the current column to be subquery
                     resultQuery.addColumn(new Column((new QueryParser()).parseQuery(subQueryInSelectStatement.substring(1, subQueryInSelectStatement.length() - 1), false)));
+                    i = closingBracketIdx + 1;
+
                 } catch(InvalidQueryFormatException ex) {
                     ex.printStackTrace();
                 }
-            } else {
-                System.out.println(i);
             }
         }
 
         throw new InvalidQueryFormatException("Malformed query, select keyword is missing");
+    }
+
+    private int extractSources(int startIdx) throws InvalidQueryFormatException {
+        int i;
+        for (i = startIdx; i < rawQuery.length(); i++) {
+            char c = rawQuery.charAt(i);
+            if (c == ' ')
+                continue;
+
+            if (c != '(') {
+                // If we bump into 'join' | 'inner join' | 'left join' | 'right join' | 'full join' | 'group by' | 'having' | 'where' | 'limit' | 'offset',
+                // then it's the end of sources declaration
+                if ((i + 1) + Keywords.join.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.join.length()).equalsIgnoreCase(Keywords.join) ||
+                    (i + 1) + Keywords.innerJoin.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.innerJoin.length()).equalsIgnoreCase(Keywords.innerJoin) ||
+                    (i + 1) + Keywords.leftJoin.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.leftJoin.length()).equalsIgnoreCase(Keywords.leftJoin) ||
+                    (i + 1) + Keywords.rightJoin.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.rightJoin.length()).equalsIgnoreCase(Keywords.rightJoin) ||
+                    (i + 1) + Keywords.fullJoin.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.fullJoin.length()).equalsIgnoreCase(Keywords.fullJoin) ||
+                    (i + 1) + Keywords.groupBy.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.groupBy.length()).equalsIgnoreCase(Keywords.groupBy) ||
+                    (i + 1) + Keywords.having.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.having.length()).equalsIgnoreCase(Keywords.having) ||
+                    (i + 1) + Keywords.where.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.where.length()).equalsIgnoreCase(Keywords.where) ||
+                    (i + 1) + Keywords.limit.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.limit.length()).equalsIgnoreCase(Keywords.limit) ||
+                    (i + 1) + Keywords.offset.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.offset.length()).equalsIgnoreCase(Keywords.offset)
+                ) {
+                    // TODO: detect the next keyword
+                    return i + 1;
+
+                } else {
+                    int j = i + 1;
+                    while (j < rawQuery.length() &&  rawQuery.charAt(j) != ',') {
+                        j++;
+                    }
+                    String fromSource = rawQuery.substring(i, j);
+                    resultQuery.addFromSource(new Source(fromSource));
+
+                    i = j + 1;
+                }
+            } else if ((i + 1) + Keywords.select.length() < rawQuery.length() && rawQuery.substring(i + 1, (i + 1) + Keywords.select.length()).equalsIgnoreCase(Keywords.select)) {
+                // Again, check whether it's a subquery
+
+                int closingBracketIdx = FindCorrespondingClosingBracket.find(rawQuery, i, '(');
+                String subQueryInFromStatement = rawQuery.substring(i, closingBracketIdx + 1); // subquery is taken without an alias!
+                resultQuery.addFromSource(new Source((new QueryParser()).parseQuery(subQueryInFromStatement.substring(1, subQueryInFromStatement.length() - 1), false)));
+                i = closingBracketIdx + 2;
+
+                // Count an alias
+                while (i < rawQuery.length() && rawQuery.charAt(i) != ',') {
+                    i++;
+                }
+            }
+        }
+
+        return i + 1;
+    }
+
+    private int extractJoinTables(int startIdx) {
+        return -1;
     }
 
 }
