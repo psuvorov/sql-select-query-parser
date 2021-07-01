@@ -84,6 +84,8 @@ public class QueryParser {
                 }
             }
         }
+
+        rawQuery = sb.toString();
     }
 
     private void validate() throws InvalidQueryFormatException {
