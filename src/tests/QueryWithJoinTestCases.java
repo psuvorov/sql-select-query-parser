@@ -12,22 +12,73 @@ public class QueryWithJoinTestCases {
 
     @Test
     public void query01() throws InvalidQueryFormatException {
-        // Simple selection of 3 columns
+        // Simple joins
 
         // Arrange
-        final String query = "select aa, bb, cc, xx, yy from table1 join table2 on table1.id = table2.ref_id";
+        final String query = "select * from Boards\n" +
+                "  left join Lists ON Boards.Id = Lists.BoardId\n" +
+                "  right join Users ON Lists.LastModifiedById = Users.Id\n" +
+                "  left join Dogs ON Boards.Id = Lists.BoardId\n" +
+                "  right join Cats ON Lists.LastModifiedById = Users.Id\n" +
+                "  left join Humans ON Boards.Id = Lists.BoardId\n" +
+                "  right join Animals ON Lists.LastModifiedById = Users.Id\n" +
+                "  full join Cards ON Users.Id = Cards.LastModifiedById";
 
         // Act
         Query res = QueryParser.parseQuery(query);
 
         // Assert
-        assertEquals(3, res.getColumns().size());
-        assertEquals("aa", res.getColumns().get(0).getSimpleColumnTermName());
-        assertEquals("bb", res.getColumns().get(1).getSimpleColumnTermName());
-        assertEquals("cc", res.getColumns().get(2).getSimpleColumnTermName());
-        assertEquals(TermType.SimpleTerm, res.getColumns().get(0).getType());
-        assertEquals(TermType.SimpleTerm, res.getColumns().get(1).getType());
-        assertEquals(TermType.SimpleTerm, res.getColumns().get(2).getType());
+
+    }
+
+    @Test
+    public void query02() throws InvalidQueryFormatException {
+        // Join with subquery's result set
+
+        // Arrange
+        final String query = "select * from Boards\n" +
+                "  left join Lists ON Boards.Id = Lists.BoardId\n" +
+                "  right join Users ON Lists.LastModifiedById = Users.Id\n" +
+                "  left join Dogs ON Boards.Id = Lists.BoardId\n" +
+                "  right join Cats ON Lists.LastModifiedById = Users.Id\n" +
+                "  full join Men ON Lists.LastModifiedById = Users.Id\n" +
+                "  join Pets as PPP ON PPP.LastModifiedById = Users.Id\n" +
+                "  left join Humans ON Boards.Id = Lists.BoardId\n" +
+                "  join NotPets as AAA ON PPP.LastModifiedById = Users.Id\n" +
+                "  right join Animals ON Lists.LastModifiedById = Users.Id\n" +
+                "  inner join (SELECT meta_value As Prenom, post_id FROM wp_postmeta join Tab5 on t1 = t2) AS a ON wp_woocommerce_order_items.order_id = a.post_id" +
+                "  where Users.email = 'mail@mail.com' limit 10";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Assert
+
+    }
+
+    @Test
+    public void query03() throws InvalidQueryFormatException {
+        // Join with subquery's result set
+
+        // Arrange
+        final String query = "select * from Boards\n" +
+                "  left join Lists ON Boards.Id = Lists.BoardId\n" +
+                "  right join Users ON Lists.LastModifiedById = Users.Id\n" +
+                "  left join Dogs ON Boards.Id = Lists.BoardId\n" +
+                "  right join Cats ON Lists.LastModifiedById = Users.Id\n" +
+                "  full join Men ON Lists.LastModifiedById = Users.Id\n" +
+                "  join Pets as PPP ON PPP.LastModifiedById = Users.Id\n" +
+                "  left join Humans ON Boards.Id = Lists.BoardId\n" +
+                "  join NotPets as AAA ON PPP.LastModifiedById = Users.Id\n" +
+                "  inner join (SELECT meta_value As Prenom, post_id FROM wp_postmeta) AS a ON wp_woocommerce_order_items.order_id = a.post_id" +
+                "  right join Animals ON Lists.LastModifiedById = Users.Id\n" +
+                "  limit 10";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Assert
+
     }
 
 }

@@ -12,9 +12,11 @@ public class Query {
 
     private final List<Join> joins = new ArrayList<>();
 
-    private final List<WhereClause> whereClauses = new ArrayList<>();
+    private Where whereSection;
 
     private final List<String> groupByColumns = new ArrayList<>();
+
+    private Having havingSection;
 
     private final List<Sort> sortColumns = new ArrayList<>();
 
@@ -34,12 +36,16 @@ public class Query {
         joins.add(join);
     }
 
-    public void addWhereClause(WhereClause whereClause) {
-        whereClauses.add(whereClause);
+    public void setWhereSection(Where whereSection) {
+        this.whereSection = whereSection;
     }
 
     public void addGroupByColumn(String groupByColumn) {
         groupByColumns.add(groupByColumn);
+    }
+
+    public void setHavingSection(Having havingSection) {
+        this.havingSection = havingSection;
     }
 
     public void addSortColumn(Sort sortColumn) {
@@ -66,8 +72,8 @@ public class Query {
         return joins;
     }
 
-    public List<WhereClause> getWhereClauses() {
-        return whereClauses;
+    public Where getWhereSection() {
+        return whereSection;
     }
 
     public List<String> getGroupByColumns() {
@@ -109,4 +115,8 @@ public class Query {
         return res.toString();
     }
 
+    @Override
+    public String toString() {
+        return getInfo();
+    }
 }

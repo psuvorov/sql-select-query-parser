@@ -2,7 +2,7 @@ package com.newjob.parser.algo;
 
 import java.util.LinkedList;
 
-public class FindCorrespondingClosingBracket {
+public class FindCorrespondingClosingBracketIndex {
 
     public static int find(String input, int startIdx, char openingBracket) {
         char closingBracket = Character.MIN_VALUE;

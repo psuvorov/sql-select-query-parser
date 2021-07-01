@@ -11,14 +11,18 @@ public class Source {
 
     private Query subQuery;
 
-    public Source(String simpleSourceTableName) {
+    private String alias;
+
+    public Source(String simpleSourceTableName, String alias) {
         type = TermType.SimpleTerm;
         this.simpleSourceTableName = simpleSourceTableName;
+        this.alias = alias;
     }
 
-    public Source(Query subQuery) {
+    public Source(Query subQuery, String alias) {
         type = TermType.SubQuery;
         this.subQuery = subQuery;
+        this.alias = alias;
     }
 
     public TermType getType() {
@@ -31,6 +35,10 @@ public class Source {
 
     public Query getSubQuery() {
         return subQuery;
+    }
+
+    public String getAlias() {
+        return alias;
     }
 
 }

@@ -19,24 +19,38 @@ public class SelectFromMultipleSourceTestCases {
 
         // Arrange
         assertEquals(1, res.getFromSources().size());
+        assertEquals("table1", res.getFromSources().get(0).getAlias());
+        assertEquals(1, res.getColumns().size());
+        assertEquals("table1.Id", res.getColumns().get(0).getSimpleColumnTermName());
+        assertEquals(1, res.getFromSources().size());
+        assertEquals("Boards.Id", res.getFromSources().get(0).getSubQuery().getColumns().get(0).getSimpleColumnTermName());
+        assertEquals("Boards", res.getFromSources().get(0).getSubQuery().getFromSources().get(0).getSimpleSourceTableName());
+        assertEquals("", res.getFromSources().get(0).getSubQuery().getFromSources().get(0).getAlias());
     }
 
     @Test
     public void query02() throws InvalidQueryFormatException {
         // Assert
-        String query = "select table1.Id from (select Boards.Id from Boards) as table1";
+        String query = "select table1.Id from (select Boards.Id from Boards as 'B o a r d s') as table1";
 
         // Act
         Query res = QueryParser.parseQuery(query);
 
         // Arrange
         assertEquals(1, res.getFromSources().size());
+        assertEquals("table1", res.getFromSources().get(0).getAlias());
+        assertEquals(1, res.getColumns().size());
+        assertEquals("table1.Id", res.getColumns().get(0).getSimpleColumnTermName());
+        assertEquals(1, res.getFromSources().size());
+        assertEquals("Boards.Id", res.getFromSources().get(0).getSubQuery().getColumns().get(0).getSimpleColumnTermName());
+        assertEquals("Boards", res.getFromSources().get(0).getSubQuery().getFromSources().get(0).getSimpleSourceTableName());
+        assertEquals("B o a r d s", res.getFromSources().get(0).getSubQuery().getFromSources().get(0).getAlias());
     }
 
     @Test
     public void query03() throws InvalidQueryFormatException {
         // Assert
-        String query = "select * from Boards, Lists, Cards";
+        String query = "select * from Boards as booards, Lists as LiSts, Cards as 'C a r d s'";
 
         // Act
         Query res = QueryParser.parseQuery(query);
@@ -48,7 +62,7 @@ public class SelectFromMultipleSourceTestCases {
     @Test
     public void query04() throws InvalidQueryFormatException {
         // Assert
-        String query = "select * from (select boards.* from Boards) boards, Lists";
+        String query = "select * from (select boards.* from Boards) boards, Lists as LiSt";
 
         // Act
         Query res = QueryParser.parseQuery(query);
@@ -67,6 +81,31 @@ public class SelectFromMultipleSourceTestCases {
 
         // Arrange
         assertEquals(3, res.getFromSources().size());
+    }
+
+    @Test
+    public void query06() throws InvalidQueryFormatException {
+        // Assert
+        String query = "select * from Tags where x > 100";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Arrange
+        assertEquals(1, res.getFromSources().size());
+    }
+
+    @Test
+    public void query07() throws InvalidQueryFormatException {
+        // Assert
+        String query = "select t.* from Tags as t where t.x > 100";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Arrange
+        assertEquals(1, res.getColumns().size());
+        assertEquals(1, res.getFromSources().size());
     }
 
 }
