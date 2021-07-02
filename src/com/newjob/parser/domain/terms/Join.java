@@ -8,21 +8,30 @@ public class Join {
 
     private final JoinType joinType;
 
-    private String joinRaw;
-
     private String referencedTableName = "";
+
+    private String referencedAlias = "";
 
     private Query referencedSubquery;
 
-    private final TermType referencedTermType;
+    private TermType referencedTermType;
 
-    private final String joinClause;
+    private String joinClause;
 
-    public Join(JoinType joinType, String joinRaw) {
+    public Join(JoinType joinType, String referencedTableName, String referencedAlias, String joinClause) {
         this.joinType = joinType;
-        this.joinRaw = joinRaw;
-        referencedTermType = TermType.SimpleTerm;
-        joinClause = "";
+        this.referencedTableName = referencedTableName;
+        this.referencedAlias = referencedAlias;
+        this.joinClause = joinClause;
+        referencedTermType = TermType.SimpleTerm; // Indicates that it's just a joined table
+    }
+
+    public Join(JoinType joinType, Query referencedSubquery, String referencedAlias, String joinClause) {
+        this.joinType = joinType;
+        this.referencedSubquery = referencedSubquery;
+        this.referencedAlias = referencedAlias;
+        this.joinClause = joinClause;
+        referencedTermType = TermType.SubQuery; // We're joining a subquery
     }
 
     public JoinType getJoinType() {
@@ -35,6 +44,10 @@ public class Join {
 
     public String getReferencedTableName() {
         return referencedTableName;
+    }
+
+    public String getReferencedAlias() {
+        return referencedAlias;
     }
 
     public Query getReferencedSubquery() {

@@ -36,6 +36,7 @@ public class Query {
         joins.add(join);
     }
 
+    // TODO: turn into List<WhereClause>
     public void setWhereSection(Where whereSection) {
         this.whereSection = whereSection;
     }
@@ -80,6 +81,10 @@ public class Query {
         return groupByColumns;
     }
 
+    public Having getHavingSection() {
+        return havingSection;
+    }
+
     public List<Sort> getSortColumns() {
         return sortColumns;
     }
@@ -93,6 +98,8 @@ public class Query {
     }
 
     public String getInfo() {
+
+        // TODO: move outside
         String spr = System.lineSeparator();
 
         StringBuilder res = new StringBuilder();

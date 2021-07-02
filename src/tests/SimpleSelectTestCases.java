@@ -203,16 +203,19 @@ public class SimpleSelectTestCases {
 
         // Act
         Query res = QueryParser.parseQuery(query);
+        Query subQuery1 = res.getColumns().get(0).getSubQuery();
+        Query subQuery2 = subQuery1.getColumns().get(0).getSubQuery();
+        Query subQuery3 = subQuery2.getColumns().get(0).getSubQuery();
 
         // Assert
         assertEquals(1, res.getColumns().size());
         assertEquals(TermType.SubQuery, res.getColumns().get(0).getType());
 
-        assertEquals(1, res.getColumns().get(0).getSubQuery().getColumns().size());
-        assertEquals(TermType.SubQuery, res.getColumns().get(0).getSubQuery().getColumns().get(0).getType());
+        assertEquals(1, subQuery1.getColumns().size());
+        assertEquals(TermType.SubQuery, subQuery1.getColumns().get(0).getType());
 
-        assertEquals(1, res.getColumns().get(0).getSubQuery().getColumns().get(0).getSubQuery().getColumns().get(0).getSubQuery().getColumns().size());
-        assertEquals(TermType.SimpleTerm, res.getColumns().get(0).getSubQuery().getColumns().get(0).getSubQuery().getColumns().get(0).getSubQuery().getColumns().get(0).getType());
+        assertEquals(1, subQuery3.getColumns().size());
+        assertEquals(TermType.SimpleTerm, subQuery3.getColumns().get(0).getType());
     }
 
     @Test

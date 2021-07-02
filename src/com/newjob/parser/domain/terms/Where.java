@@ -2,11 +2,13 @@ package com.newjob.parser.domain.terms;
 
 public class Where {
 
-    private String whereClauseRaw;
+    private final String whereClause;
 
-    public Where(String whereClauseRaw) {
-        this.whereClauseRaw = whereClauseRaw;
+    public Where(String whereClause) {
+        this.whereClause = whereClause;
     }
 
-
+    public String getWhereClause() {
+        return whereClause;
+    }
 }

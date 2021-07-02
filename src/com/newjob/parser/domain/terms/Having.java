@@ -2,9 +2,13 @@ package com.newjob.parser.domain.terms;
 
 public class Having {
 
-    private String havingClauseRaw;
+    private final String havingClause;
 
-    public Having(String havingClauseRaw) {
-        this.havingClauseRaw = havingClauseRaw;
+    public Having(String havingClause) {
+        this.havingClause = havingClause;
+    }
+
+    public String getHavingClause() {
+        return havingClause;
     }
 }

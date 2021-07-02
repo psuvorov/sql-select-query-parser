@@ -98,14 +98,18 @@ public class SelectFromMultipleSourceTestCases {
     @Test
     public void query07() throws InvalidQueryFormatException {
         // Assert
-        String query = "select t.* from Tags as t where t.x > 100";
+        String query = "select t.* from Tags as t, Bags b where t.x > 100";
 
         // Act
         Query res = QueryParser.parseQuery(query);
 
         // Arrange
         assertEquals(1, res.getColumns().size());
-        assertEquals(1, res.getFromSources().size());
+        assertEquals(2, res.getFromSources().size());
+        assertEquals("Tags", res.getFromSources().get(0).getSimpleSourceTableName());
+        assertEquals("Bags", res.getFromSources().get(1).getSimpleSourceTableName());
+        assertEquals("t", res.getFromSources().get(0).getAlias());
+        assertEquals("b", res.getFromSources().get(1).getAlias());
     }
 
 }
