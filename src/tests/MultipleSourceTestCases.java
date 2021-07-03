@@ -7,7 +7,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class SelectFromMultipleSourceTestCases {
+public class MultipleSourceTestCases {
 
     @Test
     public void query01() throws InvalidQueryFormatException {
@@ -84,18 +84,6 @@ public class SelectFromMultipleSourceTestCases {
     }
 
     @Test
-    public void query06() throws InvalidQueryFormatException {
-        // Assert
-        String query = "select * from Tags where x > 100";
-
-        // Act
-        Query res = QueryParser.parseQuery(query);
-
-        // Arrange
-        assertEquals(1, res.getFromSources().size());
-    }
-
-    @Test
     public void query07() throws InvalidQueryFormatException {
         // Assert
         String query = "select t.* from Tags as t, Bags b where t.x > 100";
@@ -110,6 +98,18 @@ public class SelectFromMultipleSourceTestCases {
         assertEquals("Bags", res.getFromSources().get(1).getSimpleSourceTableName());
         assertEquals("t", res.getFromSources().get(0).getAlias());
         assertEquals("b", res.getFromSources().get(1).getAlias());
+    }
+
+    @Test
+    public void query08() throws InvalidQueryFormatException {
+        // Assert
+        String query = "select t.* from Tags,Bags,Legs";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Arrange
+        assertEquals(3, res.getFromSources().size());
     }
 
 }

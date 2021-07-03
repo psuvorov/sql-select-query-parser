@@ -9,7 +9,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class QueryWithJoinTestCases {
+public class JoinTestCases {
 
     @Test
     public void query01() throws InvalidQueryFormatException {

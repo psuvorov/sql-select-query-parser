@@ -8,7 +8,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class QueryWithLimitAndOffsetTestCases {
+public class LimitAndOffsetTestCases {
 
     @Test
     public void query01() throws InvalidQueryFormatException {

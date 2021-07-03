@@ -48,6 +48,28 @@ public class SimpleSelectTestCases {
     }
 
     @Test
+    public void query01_2() throws InvalidQueryFormatException {
+        // TODO: not passed
+
+        // Simple selection of 3 columns
+
+        // Arrange
+        final String query = "select aa,bb,cc from table1";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Assert
+        assertEquals(3, res.getColumns().size());
+        assertEquals("aa", res.getColumns().get(0).getSimpleColumnTermName());
+        assertEquals("bb", res.getColumns().get(1).getSimpleColumnTermName());
+        assertEquals("cc", res.getColumns().get(2).getSimpleColumnTermName());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(0).getType());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(1).getType());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(2).getType());
+    }
+
+    @Test
     public void query02() throws InvalidQueryFormatException {
         // select all columns
 
@@ -174,10 +196,10 @@ public class SimpleSelectTestCases {
 
     @Test
     public void query04_4() throws InvalidQueryFormatException {
-        // one nested query in select statement and one simple column
+        // TODO: fails
 
         // Arrange
-        final String query = "select (select avg(x) from table_with_x) 'Inner Query', cc from table1";
+        final String query = "select (select avg(x),sum(x) from table_with_x) 'Inner Query', cc from table1";
 
         // Act
         Query res = QueryParser.parseQuery(query);
@@ -189,9 +211,11 @@ public class SimpleSelectTestCases {
         assertEquals(TermType.SubQuery, res.getColumns().get(0).getType());
         assertEquals(TermType.SimpleTerm, res.getColumns().get(1).getType());
 
-        assertEquals(1, res.getColumns().get(0).getSubQuery().getColumns().size());
+        assertEquals(2, res.getColumns().get(0).getSubQuery().getColumns().size());
         assertEquals(TermType.SimpleTerm, res.getColumns().get(0).getSubQuery().getColumns().get(0).getType());
         assertEquals("avg(x)", res.getColumns().get(0).getSubQuery().getColumns().get(0).getSimpleColumnTermName());
+        assertEquals(TermType.SimpleTerm, res.getColumns().get(0).getSubQuery().getColumns().get(1).getType());
+        assertEquals("sum(x)", res.getColumns().get(0).getSubQuery().getColumns().get(1).getSimpleColumnTermName());
     }
 
     @Test
@@ -223,7 +247,7 @@ public class SimpleSelectTestCases {
         // Simple selection of 3 columns
 
         // Arrange
-        final String query = "select table1.aa, bb as 'BbB', cc 'CCC' from table1";
+        final String query = "select table1.aa,bb as 'BbB',cc 'CCC' from table1";
 
         // Act
         Query res = QueryParser.parseQuery(query);

@@ -7,7 +7,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class QueryWithWhereTestCases {
+public class WhereTestCases {
 
     @Test
     public void query01() throws InvalidQueryFormatException {

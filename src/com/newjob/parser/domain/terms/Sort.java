@@ -4,9 +4,9 @@ import com.newjob.parser.domain.enums.SortType;
 
 public class Sort {
 
-    private String column;
+    private final String column;
 
-    private SortType sortType;
+    private final SortType sortType;
 
     public Sort(String column, SortType sortType) {
         this.column = column;

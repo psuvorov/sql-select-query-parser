@@ -5,29 +5,12 @@ import com.newjob.parser.domain.Query;
 import com.newjob.parser.exceptions.InvalidQueryFormatException;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+
 public class ComplexTestCases {
 
     @Test
     public void query01() throws InvalidQueryFormatException {
-        // Simple joins
-
-        // Arrange
-        final String query = "select * from Boards\n" +
-                "  left join Lists ON Boards.Id = Lists.BoardId\n" +
-                "  inner join (SELECT meta_value As Prenom, post_id FROM wp_postmeta right join Tab5 on t1 = t2 where id = 7) AS a ON wp_woocommerce_order_items.order_id = a.post_id\n" +
-                "  full join Cards ON Users.Id = Cards.LastModifiedById";
-
-        // Act
-        Query res = QueryParser.parseQuery(query);
-
-        // Assert
-
-    }
-
-    @Test
-    public void query02() throws InvalidQueryFormatException {
-        // Simple joins
-
         // Arrange
         final String query = "select * from Boards\n" +
                 "  left join Lists ON Boards.Id = Lists.BoardId\n" +
@@ -43,32 +26,17 @@ public class ComplexTestCases {
         Query res = QueryParser.parseQuery(query);
 
         // Assert
+        assertEquals(1, res.getFromSources().size());
+        assertEquals(3, res.getJoins().size());
+
+        assertEquals(2, res.getJoins().get(1).getReferencedSubquery().getFromSources().size());
+
+        // TODO: continue to break up 'where' section
     }
 
     @Test
-    public void query03() throws InvalidQueryFormatException {
-        // Simple joins
-
-        // Arrange
-        final String query = "select * from Boards\n" +
-                "  left join Lists ON Boards.Id = Lists.BoardId\n" +
-                "  inner join (SELECT meta_value As Prenom, post_id FROM wp_postmeta right join Tab5 on t1 = t2 where id = 7) AS a ON wp_woocommerce_order_items.order_id = a.post_id\n" +
-                "  full join Cards ON Users.Id = Cards.LastModifiedById" +
-                "  where SalesPersonID IN (SELECT SalesPerson.BusinessEntityID\n" +
-                "               FROM   sales.SalesPerson\n" +
-                "               WHERE  SalesYTD > 3000000\n" +
-                "                      AND SalesOrderHeader.SalesPersonID \n" +
-                "                        = Sales.SalesPerson.BusinessEntityID) group by Id, name having Id <= 10 order by name";
-
-        // Act
-        Query res = QueryParser.parseQuery(query);
-
-        // Assert
-    }
-
-    @Test
-    public void query04() throws InvalidQueryFormatException {
-        // Simple joins
+    public void query02() throws InvalidQueryFormatException {
+        // TODO: fails
 
         // Arrange
         final String query = "" +

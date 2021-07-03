@@ -7,7 +7,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class QueryWithGroupByAndHavingTestCases {
+public class GroupByAndHavingTestCases {
 
     @Test
     public void query01() throws InvalidQueryFormatException {
@@ -50,6 +50,21 @@ public class QueryWithGroupByAndHavingTestCases {
         assertEquals("BillingDate", res.getGroupByColumns().get(0));
 
         assertEquals("COUNT(*) > 1 AND SUM(BillingTotal) > 100", res.getHavingSection().getHavingClause());
+    }
+
+    @Test(expected = InvalidQueryFormatException.class)
+    public void query03() throws InvalidQueryFormatException {
+        // Arrange
+        final String query = "SELECT BillingDate, " +
+                "       COUNT(*) AS BillingQty, " +
+                "       SUM(BillingTotal) AS BillingSum " +
+                "FROM Billings " +
+                "WHERE BillingDate BETWEEN '2002-05-01' AND '2002-05-31' " +
+                "HAVING COUNT(*) > 1 AND SUM(BillingTotal) > 100 " +
+                "limit 10 offset 3";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
     }
 
 
