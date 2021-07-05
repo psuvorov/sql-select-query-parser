@@ -381,62 +381,48 @@ public class QueryParser {
     }
 
     private int extractJoinStatements(int startIdx) {
-        int i;
-        for (i = startIdx; i < rawQuery.length(); i++) {
-            char c = rawQuery.charAt(i);
-            if (c == ' ')
-                continue;
+        int j = startIdx;
+        while (j < rawQuery.length()) {
 
-            int j = i;
-
-            while (j < rawQuery.length()) {
-                if (j + Keywords.innerJoin.length() < rawQuery.length() && rawQuery.substring(j, j + Keywords.innerJoin.length()).equalsIgnoreCase(Keywords.innerJoin)) {
-                    String wholeJoinStatement = getWholeJoinStatement(j).trim();
-                    addExtractedJoinStatements(JoinType.Inner, Keywords.innerJoin, wholeJoinStatement);
-                    i += wholeJoinStatement.length() - 2;
-                    break;
-                } else if (j + Keywords.leftJoin.length() < rawQuery.length() && rawQuery.substring(j, j + Keywords.leftJoin.length()).equalsIgnoreCase(Keywords.leftJoin)) {
-                    String wholeJoinStatement = getWholeJoinStatement(j).trim();
-                    addExtractedJoinStatements(JoinType.Left, Keywords.leftJoin, wholeJoinStatement);
-                    i += wholeJoinStatement.length() - 2;
-                    break;
-                } else if (j + Keywords.rightJoin.length() < rawQuery.length() && rawQuery.substring(j, j + Keywords.rightJoin.length()).equalsIgnoreCase(Keywords.rightJoin)) {
-                    String wholeJoinStatement = getWholeJoinStatement(j).trim();
-                    addExtractedJoinStatements(JoinType.Right, Keywords.rightJoin, wholeJoinStatement);
-                    i += wholeJoinStatement.length() - 2;
-                    break;
-                } else if (j + Keywords.fullJoin.length() < rawQuery.length() && rawQuery.substring(j, j + Keywords.fullJoin.length()).equalsIgnoreCase(Keywords.fullJoin)) {
-                    String wholeJoinStatement = getWholeJoinStatement(j).trim();
-                    addExtractedJoinStatements(JoinType.Full, Keywords.fullJoin, wholeJoinStatement);
-                    i += wholeJoinStatement.length() - 2;
-                    break;
-                }
-                // Next, let's figure out what the next section is after join(s)
-                else if (j + Keywords.where.length() < rawQuery.length() && rawQuery.substring(j, j + Keywords.where.length()).equalsIgnoreCase(Keywords.where)) {
-                    nextKeywordAfterSourceSection = Keywords.where;
-                    return i;
-                } else if (j + Keywords.groupBy.length() < rawQuery.length() && rawQuery.substring(j, j + Keywords.groupBy.length()).equalsIgnoreCase(Keywords.groupBy)) {
-                    nextKeywordAfterSourceSection = Keywords.groupBy;
-                    return i;
-                } else if (j + Keywords.having.length() < rawQuery.length() && rawQuery.substring(j, j + Keywords.having.length()).equalsIgnoreCase(Keywords.having)) {
-                    nextKeywordAfterSourceSection = Keywords.having;
-                    return i;
-                } else if (j + Keywords.orderBy.length() < rawQuery.length() && rawQuery.substring(j, j + Keywords.orderBy.length()).equalsIgnoreCase(Keywords.orderBy)) {
-                    nextKeywordAfterSourceSection = Keywords.orderBy;
-                    return i;
-                } else if (j + Keywords.limit.length() < rawQuery.length() && rawQuery.substring(j, j + Keywords.limit.length()).equalsIgnoreCase(Keywords.limit)) {
-                    nextKeywordAfterSourceSection = Keywords.limit;
-                    return i;
-                } else if (j + Keywords.offset.length() < rawQuery.length() && rawQuery.substring(j, j + Keywords.offset.length()).equalsIgnoreCase(Keywords.offset)) {
-                    nextKeywordAfterSourceSection = Keywords.offset;
-                    return i;
-                } else {
-                    j++;
-                }
+            if (j + Keywords.innerJoin.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.innerJoin.length()).equalsIgnoreCase(Keywords.innerJoin)) {
+                String wholeJoinStatement = getWholeJoinStatement(j).trim();
+                addExtractedJoinStatements(JoinType.Inner, Keywords.innerJoin, wholeJoinStatement);
+                j += wholeJoinStatement.length() - 2;
+            } else if (j + Keywords.leftJoin.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.leftJoin.length()).equalsIgnoreCase(Keywords.leftJoin)) {
+                String wholeJoinStatement = getWholeJoinStatement(j).trim();
+                addExtractedJoinStatements(JoinType.Left, Keywords.leftJoin, wholeJoinStatement);
+                j += wholeJoinStatement.length() - 2;
+            } else if (j + Keywords.rightJoin.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.rightJoin.length()).equalsIgnoreCase(Keywords.rightJoin)) {
+                String wholeJoinStatement = getWholeJoinStatement(j).trim();
+                addExtractedJoinStatements(JoinType.Right, Keywords.rightJoin, wholeJoinStatement);
+                j += wholeJoinStatement.length() - 2;
+            } else if (j + Keywords.fullJoin.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.fullJoin.length()).equalsIgnoreCase(Keywords.fullJoin)) {
+                String wholeJoinStatement = getWholeJoinStatement(j).trim();
+                addExtractedJoinStatements(JoinType.Full, Keywords.fullJoin, wholeJoinStatement);
+                j += wholeJoinStatement.length() - 2;
+            } if (j + Keywords.groupBy.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.groupBy.length()).equalsIgnoreCase(Keywords.groupBy)) {
+                nextKeywordAfterSourceSection = Keywords.groupBy;
+                break;
+            } else if (j + Keywords.having.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.having.length()).equalsIgnoreCase(Keywords.having)) {
+                nextKeywordAfterSourceSection = Keywords.having;
+                break;
+            } else if (j + Keywords.orderBy.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.orderBy.length()).equalsIgnoreCase(Keywords.orderBy)) {
+                nextKeywordAfterSourceSection = Keywords.orderBy;
+                break;
+            } else if (j + Keywords.limit.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.limit.length()).equalsIgnoreCase(Keywords.limit)) {
+                nextKeywordAfterSourceSection = Keywords.limit;
+                break;
+            } else if (j + Keywords.offset.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.offset.length()).equalsIgnoreCase(Keywords.offset)) {
+                nextKeywordAfterSourceSection = Keywords.offset;
+                break;
+            } else if (rawQuery.charAt(j) == '-' && rawQuery.charAt(j + 1) == '-') { // query end terminator
+                break;
+            } else {
+                j++;
             }
         }
 
-        return i;
+        return j;
     }
 
     private String getWholeJoinStatement(int startIdx) {

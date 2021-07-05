@@ -2,6 +2,9 @@ package tests;
 
 import com.newjob.parser.QueryParser;
 import com.newjob.parser.domain.Query;
+import com.newjob.parser.domain.enums.JoinType;
+import com.newjob.parser.domain.enums.SortType;
+import com.newjob.parser.domain.enums.TermType;
 import com.newjob.parser.exceptions.InvalidQueryFormatException;
 import org.junit.Test;
 
@@ -37,29 +40,35 @@ public class ComplexTestCases {
 
     @Test
     public void query02() throws InvalidQueryFormatException {
-        // TODO: fails
-
         // Arrange
-        final String query = "" +
-                "SELECT Products.*" +
-                "FROM Products" +
-                "     INNER JOIN " +
-                "(" +
-                "    SELECT ProductID, Sum(Quantity) as QuantitySum" +
-                "    from" +
-                "    (" +
-                "        SELECT ProductID, Quantity  " +
-                "        FROM BasketItems  " +
-                "    ) v" +
-                "    GROUP BY ProductID" +
-                ") ProductTotals" +
-                "    ON Products.ID = ProductTotals.ProductID" +
+        final String query =
+                "SELECT Products.*\n" +
+                "FROM Products\n" +
+                "     INNER JOIN \n" +
+                "(\n" +
+                "    SELECT ProductID, Sum(Quantity) as QuantitySum\n" +
+                "    from\n" +
+                "    (\n" +
+                "        SELECT ProductID, Quantity  \n" +
+                "        FROM BasketItems  \n" +
+                "    ) v\n" +
+                "    GROUP BY ProductID\n" +
+                ") ProductTotals\n" +
+                "    ON Products.ID = ProductTotals.ProductID\n" +
                 "ORDER BY QuantitySum DESC";
 
         // Act
         Query res = QueryParser.parseQuery(query);
 
         // Assert
+        assertEquals("Products.*", res.getColumns().get(0).getSimpleColumnTermName());
+        assertEquals("Products", res.getFromSources().get(0).getSimpleSourceTableName());
+        assertEquals(JoinType.Inner, res.getJoins().get(0).getJoinType());
+        assertEquals(TermType.SubQuery, res.getJoins().get(0).getReferencedTermType());
+        assertEquals("ProductTotals", res.getJoins().get(0).getReferencedAlias());
+        assertEquals("Products.ID = ProductTotals.ProductID", res.getJoins().get(0).getJoinClause());
+        assertEquals("QuantitySum", res.getSortColumns().get(0).getColumn());
+        assertEquals(SortType.Desc, res.getSortColumns().get(0).getSortType());
 
 
     }

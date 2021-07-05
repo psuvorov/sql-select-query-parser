@@ -52,5 +52,24 @@ public class DrunkTestCases {
         assertEquals(1, res.getColumns().get(3).getSubQuery().getColumns().size());
         assertEquals(TermType.SimpleTerm, res.getColumns().get(3).getSubQuery().getColumns().get(0).getType());
         assertEquals("avg(x)", res.getColumns().get(3).getSubQuery().getColumns().get(0).getSimpleColumnTermName());
+        assertEquals("AAAVVVGGG", res.getColumns().get(3).getSubQuery().getColumns().get(0).getAlias());
+    }
+
+    @Test
+    public void query03() throws InvalidQueryFormatException {
+        // Arrange
+        final String query = "select\n" +
+                "aa,\n" +
+                "bb,\n" +
+                "cc\n" +
+                "from\n" +
+                "table1";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Assert
+        assertEquals(3, res.getColumns().size());
+        assertEquals(1, res.getFromSources().size());
     }
 }

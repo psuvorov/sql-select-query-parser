@@ -2,6 +2,7 @@ package tests;
 
 import com.newjob.parser.QueryParser;
 import com.newjob.parser.domain.Query;
+import com.newjob.parser.domain.enums.TermType;
 import com.newjob.parser.exceptions.InvalidQueryFormatException;
 import org.junit.Test;
 
@@ -116,14 +117,17 @@ public class MultipleSourceTestCases {
     public void query09() throws InvalidQueryFormatException {
         // Assert
         String query = "SELECT\n" +
-                "  count       (     b.Username   )\n" +
+                "count       (     b.Username   )\n" +
                 "FROM (select * from Users)b";
 
         // Act
         Query res = QueryParser.parseQuery(query);
 
         // Arrange
-        assertEquals(1, res.getFromSources().size());
+        assertEquals(1, res.getColumns().size());
+        assertEquals("count(b.Username)", res.getColumns().get(0).getSimpleColumnTermName());
+        assertEquals(TermType.SubQuery, res.getFromSources().get(0).getType());
+        assertEquals("b", res.getFromSources().get(0).getAlias());
     }
 
 }
