@@ -30,6 +30,7 @@ public class DrunkTestCases {
         assertEquals(1, res.getColumns().get(3).getSubQuery().getColumns().size());
         assertEquals(TermType.SimpleTerm, res.getColumns().get(3).getSubQuery().getColumns().get(0).getType());
         assertEquals("avg(x)", res.getColumns().get(3).getSubQuery().getColumns().get(0).getSimpleColumnTermName());
+        assertEquals("AAAVVVGGG", res.getColumns().get(3).getSubQuery().getColumns().get(0).getAlias());
     }
 
     @Test

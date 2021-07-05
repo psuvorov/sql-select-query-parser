@@ -69,10 +69,28 @@ public class ComplexTestCases {
         assertEquals("Products.ID = ProductTotals.ProductID", res.getJoins().get(0).getJoinClause());
         assertEquals("QuantitySum", res.getSortColumns().get(0).getColumn());
         assertEquals(SortType.Desc, res.getSortColumns().get(0).getSortType());
-
-
     }
 
+    @Test
+    public void query03() throws InvalidQueryFormatException {
+        // Arrange
+        final String query = "SELECT \n" +
+                "\tcountry.country_name_eng,\n" +
+                "\tSUM(CASE WHEN call.id IS NOT NULL THEN 1 ELSE 0 END) AS calls,\n" +
+                "\tAVG(ISNULL(DATEDIFF(SECOND, call.start_time, call.end_time),0)) AS avg_difference\n" +
+                "FROM country ";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Arrange
+        assertEquals("country.country_name_eng", res.getColumns().get(0).getSimpleColumnTermName());
+        assertEquals("SUM(CASE WHEN call.id IS NOT NULL THEN 1 ELSE 0 END)", res.getColumns().get(1).getSimpleColumnTermName());
+        assertEquals("calls", res.getColumns().get(1).getAlias());
+        assertEquals("AVG(ISNULL(DATEDIFF(SECOND, call.start_time, call.end_time) ,0))", res.getColumns().get(2).getSimpleColumnTermName());
+        assertEquals("avg_difference", res.getColumns().get(2).getAlias());
+
+    }
 
 
 }
