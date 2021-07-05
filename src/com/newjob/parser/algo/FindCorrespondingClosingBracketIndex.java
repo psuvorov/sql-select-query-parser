@@ -12,8 +12,6 @@ public class FindCorrespondingClosingBracketIndex {
             closingBracket = ']';
         else if (openingBracket == '{') {
             closingBracket = '}';
-        } else {
-            throw new IllegalArgumentException("Unknown bracket type");
         }
 
         if (input.charAt(startIdx) != openingBracket)
