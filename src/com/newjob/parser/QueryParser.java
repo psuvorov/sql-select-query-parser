@@ -3,6 +3,7 @@ package com.newjob.parser;
 import com.newjob.parser.algo.FindCorrespondingClosingBracketIndex;
 import com.newjob.parser.domain.Query;
 import com.newjob.parser.domain.enums.JoinType;
+import com.newjob.parser.domain.enums.SortType;
 import com.newjob.parser.domain.terms.*;
 import com.newjob.parser.exceptions.InvalidQueryFormatException;
 
@@ -22,6 +23,7 @@ public class QueryParser {
     private static final class Keywords {
         private static final String select = "select";
         private static final String from = "from";
+        private static final String as = "as";
         private static final String join = "join";
         private static final String innerJoin = "inner join";
         private static final String leftJoin = "left join";
@@ -34,6 +36,10 @@ public class QueryParser {
         private static final String having = "having";
         private static final String limit = "limit";
         private static final String offset = "offset";
+
+        private static final String singleLineComment = "--";
+        private static final String startMultilineComment = "/*";
+        private static final String endMultilineComment = "*/";
     }
 
     public static Query parseQuery(String query) throws InvalidQueryFormatException {
@@ -59,35 +65,51 @@ public class QueryParser {
     private void normalize() {
         rawQuery = rawQuery
                 .trim()
+                .replace(")", ") ")
                 .replaceAll("\\s+", " ") // whitespaces to the single one
-                .replace("--", "") // get rid off all comments
+//                .replace("--", "") // TODO: get rid off all comments
                 .replace("( ", "(") // proper brackets position
                 .replace(" )", ")")
+                .replace(", ", ",")
+                .replace(" ,", ",")
                 .replace(";", "");
 
-        replaceSingleJoinWithInnerJoinKeyword();
+        otherReplacement();
     }
 
     // To improve quality of life, turn 'join' to 'inner join' to make parsing process a bit simpler
-    private void replaceSingleJoinWithInnerJoinKeyword() {
+    private void otherReplacement() {
         StringBuilder sb = new StringBuilder(rawQuery);
 
         for (int i = 0; i < sb.length() - Keywords.join.length(); i++) {
             if (sb.substring(i, i + Keywords.join.length()).equalsIgnoreCase(Keywords.join)) {
+                replaceSingleJoinWithInnerJoinKeyword(sb, i);
+            }
 
-                String possibleInnerJoinStatement = sb.substring(i - Keywords.innerJoin.length() + Keywords.join.length(), i + Keywords.join.length());
-                String possibleLeftJoinStatement = sb.substring(i - Keywords.leftJoin.length() + Keywords.join.length(), i + Keywords.join.length());
-                String possibleRightJoinStatement = sb.substring(i - Keywords.rightJoin.length() + Keywords.join.length(), i + Keywords.join.length());
-                String possibleFullJoinStatement = sb.substring(i - Keywords.fullJoin.length() + Keywords.join.length(), i + Keywords.join.length());
-
-                if (!(possibleInnerJoinStatement.equalsIgnoreCase(Keywords.innerJoin) || possibleLeftJoinStatement.equalsIgnoreCase(Keywords.leftJoin) ||
-                      possibleRightJoinStatement.equalsIgnoreCase(Keywords.rightJoin) || possibleFullJoinStatement.equalsIgnoreCase(Keywords.fullJoin))) {
-                    sb.insert(i, "inner ", 0, 6 /* 'inner ' length */);
-                }
+            if (sb.substring(i, i + Keywords.as.length()).equalsIgnoreCase(Keywords.as)) {
+                deleteAsKeyword(sb, i);
             }
         }
 
         rawQuery = sb.toString();
+    }
+
+    private void replaceSingleJoinWithInnerJoinKeyword(StringBuilder sb, int i) {
+        String possibleInnerJoinStatement = sb.substring(i - Keywords.innerJoin.length() + Keywords.join.length(), i + Keywords.join.length());
+        String possibleLeftJoinStatement = sb.substring(i - Keywords.leftJoin.length() + Keywords.join.length(), i + Keywords.join.length());
+        String possibleRightJoinStatement = sb.substring(i - Keywords.rightJoin.length() + Keywords.join.length(), i + Keywords.join.length());
+        String possibleFullJoinStatement = sb.substring(i - Keywords.fullJoin.length() + Keywords.join.length(), i + Keywords.join.length());
+
+        if (!(possibleInnerJoinStatement.equalsIgnoreCase(Keywords.innerJoin) || possibleLeftJoinStatement.equalsIgnoreCase(Keywords.leftJoin) ||
+                possibleRightJoinStatement.equalsIgnoreCase(Keywords.rightJoin) || possibleFullJoinStatement.equalsIgnoreCase(Keywords.fullJoin))) {
+            sb.insert(i, "inner ", 0, 6 /* 'inner ' length */);
+        }
+    }
+
+    private void deleteAsKeyword(StringBuilder sb, int i) {
+        if (sb.charAt(i - 1) == ' ' && sb.charAt(i + 2) == ' ') {
+            sb.delete(i, i + 3);
+        }
     }
 
     private void validate() throws InvalidQueryFormatException {
@@ -167,7 +189,7 @@ public class QueryParser {
 
             // The end of 'from' section, collect gathered data
             if (j + Keywords.from.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.from.length()).equalsIgnoreCase(Keywords.from)) {
-                addExtractedColumnsToResultQuery(sb.toString());
+                addExtractedColumnsToResultQuery(sb.toString().trim());
                 return j;
             } else if (rawQuery.charAt(j) == '(') {
                 int closingBracketIdx = FindCorrespondingClosingBracketIndex.find(rawQuery, j, '(');
@@ -183,42 +205,65 @@ public class QueryParser {
         throw new InvalidQueryFormatException("Malformed query, 'select' keyword is missing");
     }
 
-    // TODO: two functions addExtractedSourcesToResultQuery and addExtractedColumnsToResultQuery are very similar to each other
+    // TODO: merge two identical functions
     private void addExtractedColumnsToResultQuery(String columnsRaw) throws InvalidQueryFormatException {
-        String[] splitColumnsRaw = columnsRaw.split(", ");
-
-        for (String columnRaw : splitColumnsRaw) {
-            columnRaw = columnRaw.trim();
-
-            // Extracted column can be a subquery, let's handle that
-            if (columnRaw.toLowerCase(Locale.ROOT).startsWith("(select")) {
-
-                int closingBracketIdx = FindCorrespondingClosingBracketIndex.find(columnRaw, 0, '(');
-                if (closingBracketIdx == columnRaw.length() - 1) {
-                    // Column has no an alias
-                    resultQuery.addColumn(new Column((new QueryParser()).parseQuery(columnRaw.substring(1, columnRaw.length() - 1), false), ""));
+        String columnsRawLowerCased = columnsRaw.toLowerCase(Locale.ROOT);
+        int j = 0;
+        var sb = new StringBuilder();
+        while (j < columnsRaw.length()) {
+            if (columnsRawLowerCased.startsWith("(select", j)) {
+                int openingBracketIdx = j;
+                int closingBracketIdx = FindCorrespondingClosingBracketIndex.find(columnsRaw, openingBracketIdx, '(');
+                if (closingBracketIdx + 1 < columnsRaw.length() && columnsRaw.charAt(closingBracketIdx + 1) == ' ') {
+                    j = closingBracketIdx + 2;
+                    // Collect query alias
+                    while (j < columnsRaw.length() && columnsRaw.charAt(j) != ',') {
+                        sb.append(columnsRaw.charAt(j));
+                        j++;
+                    }
                 } else {
-                    String alias = columnRaw
-                            .substring(closingBracketIdx + 1)
-                            .replaceAll(AliasRefinerRegExPattern, "")
-                            .trim();
+                    j = closingBracketIdx + 1;
+                }
 
-                    resultQuery.addColumn(new Column((new QueryParser()).parseQuery(columnRaw.substring(1, closingBracketIdx), false), alias));
+                String subquery = columnsRaw.substring(openingBracketIdx + 1, closingBracketIdx);
+                if (sb.length() > 0) {
+                    resultQuery.addColumn(new Column((new QueryParser()).parseQuery(subquery, false), sb.toString().replaceAll(AliasRefinerRegExPattern, "")));
+                    sb.setLength(0);
+                } else {
+                    resultQuery.addColumn(new Column((new QueryParser()).parseQuery(subquery, false), ""));
                 }
             } else {
-                int aliasSplitterIdx = columnRaw.toLowerCase(Locale.ROOT).indexOf(" as ");
-
-                if (aliasSplitterIdx == -1)
-                    aliasSplitterIdx = columnRaw.toLowerCase(Locale.ROOT).indexOf(" ");
-
-                if (aliasSplitterIdx == -1) {
-                    resultQuery.addColumn(new Column(columnRaw, ""));
-                } else {
-                    String columnWithoutAlias = columnRaw.substring(0, aliasSplitterIdx).trim();
-                    String columnAlias = columnRaw.substring(aliasSplitterIdx).replaceAll(AliasRefinerRegExPattern, "").trim();
-                    resultQuery.addColumn(new Column(columnWithoutAlias, columnAlias));
+                while (j < columnsRaw.length() && columnsRaw.charAt(j) != ',') {
+                    sb.append(columnsRaw.charAt(j));
+                    j++;
                 }
+                String columnName = "";
+                String columnAlias = "";
+                int aliasDelimiter = sb.indexOf(" ");
+                if (aliasDelimiter != -1) {
+                    columnName = sb.substring(0, aliasDelimiter).trim();
+                    columnAlias = sb.substring(aliasDelimiter + 1, sb.length()).replaceAll(AliasRefinerRegExPattern, "").trim();
+
+                    // Check if it's a function. If it's, move concat columnName with brackets part, the rest is the alias
+                    if (columnAlias.startsWith("(")) {
+                        if (columnAlias.lastIndexOf(' ') != -1) {
+                            columnName += columnAlias.substring(0, columnAlias.lastIndexOf(' '));
+                            columnAlias = columnAlias.substring(columnAlias.lastIndexOf(' ') + 1);
+                        } else {
+                            columnName += columnAlias;
+                            columnAlias = "";
+                        }
+                    }
+                } else {
+                    columnName = sb.toString().trim();
+                    columnAlias = "";
+                }
+
+                resultQuery.addColumn(new Column(columnName, columnAlias));
+                sb.setLength(0);
             }
+
+            j++;
         }
     }
 
@@ -231,39 +276,39 @@ public class QueryParser {
             // If we bump into 'inner join' | 'left join' | 'right join' | 'full join' | 'group by' | 'having' | 'where' | 'limit' | 'offset',
             // then it's the end of sources declaration
             if (j + Keywords.innerJoin.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.innerJoin.length()).equalsIgnoreCase(Keywords.innerJoin)) {
-                addExtractedSourcesToResultQuery(sb.toString());
+                addExtractedSourcesToResultQuery(sb.toString().trim());
                 nextKeywordAfterSourceSection = Keywords.innerJoin;
                 return j;
             } else if (j + Keywords.leftJoin.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.leftJoin.length()).equalsIgnoreCase(Keywords.leftJoin)) {
-                addExtractedSourcesToResultQuery(sb.toString());
+                addExtractedSourcesToResultQuery(sb.toString().trim());
                 nextKeywordAfterSourceSection = Keywords.leftJoin;
                 return j;
             } else if (j + Keywords.rightJoin.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.rightJoin.length()).equalsIgnoreCase(Keywords.rightJoin)) {
-                addExtractedSourcesToResultQuery(sb.toString());
+                addExtractedSourcesToResultQuery(sb.toString().trim());
                 nextKeywordAfterSourceSection = Keywords.rightJoin;
                 return j;
             } else if (j + Keywords.fullJoin.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.fullJoin.length()).equalsIgnoreCase(Keywords.fullJoin)) {
-                addExtractedSourcesToResultQuery(sb.toString());
+                addExtractedSourcesToResultQuery(sb.toString().trim());
                 nextKeywordAfterSourceSection = Keywords.fullJoin;
                 return j;
             } else if (j + Keywords.groupBy.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.groupBy.length()).equalsIgnoreCase(Keywords.groupBy)) {
-                addExtractedSourcesToResultQuery(sb.toString());
+                addExtractedSourcesToResultQuery(sb.toString().trim());
                 nextKeywordAfterSourceSection = Keywords.groupBy;
                 return j;
             } else if (j + Keywords.having.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.having.length()).equalsIgnoreCase(Keywords.having)) {
-                addExtractedSourcesToResultQuery(sb.toString());
+                addExtractedSourcesToResultQuery(sb.toString().trim());
                 nextKeywordAfterSourceSection = Keywords.having;
                 return j;
             } else if (j + Keywords.where.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.where.length()).equalsIgnoreCase(Keywords.where)) {
-                addExtractedSourcesToResultQuery(sb.toString());
+                addExtractedSourcesToResultQuery(sb.toString().trim());
                 nextKeywordAfterSourceSection = Keywords.where;
                 return j;
             } else if (j + Keywords.limit.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.limit.length()).equalsIgnoreCase(Keywords.limit)) {
-                addExtractedSourcesToResultQuery(sb.toString());
+                addExtractedSourcesToResultQuery(sb.toString().trim());
                 nextKeywordAfterSourceSection = Keywords.limit;
                 return j;
             } else if (j + Keywords.offset.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.offset.length()).equalsIgnoreCase(Keywords.offset)) {
-                addExtractedSourcesToResultQuery(sb.toString());
+                addExtractedSourcesToResultQuery(sb.toString().trim());
                 nextKeywordAfterSourceSection = Keywords.offset;
                 return j;
             } else if (rawQuery.charAt(j) == '(') {
@@ -272,7 +317,7 @@ public class QueryParser {
                 sb.append(whateverInBrackets);
                 j += whateverInBrackets.length();
             } else if (rawQuery.charAt(j) == '-' && rawQuery.charAt(j + 1) == '-') { // query end terminator
-                addExtractedSourcesToResultQuery(sb.toString());
+                addExtractedSourcesToResultQuery(sb.toString().trim());
                 // no nextKeywordAfterSourceSection, this is the end of the query text
                 return j;
             } else {
@@ -284,43 +329,54 @@ public class QueryParser {
         throw new InvalidQueryFormatException("Malformed query, 'from' keyword is missing");
     }
 
-    // TODO: two functions addExtractedSourcesToResultQuery and addExtractedColumnsToResultQuery are very similar to each other
     private void addExtractedSourcesToResultQuery(String sourcesRaw) throws InvalidQueryFormatException {
-        String[] splitSourcesRaw = sourcesRaw.split(", ");
+        String sourcesRawLowerCased = sourcesRaw.toLowerCase(Locale.ROOT);
+        int j = 0;
+        var sb = new StringBuilder();
+        while (j < sourcesRaw.length()) {
+            if (sourcesRawLowerCased.startsWith("(select", j)) {
+                int openingBracketIdx = j;
+                int closingBracketIdx = FindCorrespondingClosingBracketIndex.find(sourcesRaw, openingBracketIdx, '(');
+                if (closingBracketIdx + 1 < sourcesRaw.length() && sourcesRaw.charAt(closingBracketIdx + 1) == ' ') {
+                    j = closingBracketIdx + 2;
+                    // Collect query alias
+                    while (j < sourcesRaw.length() && sourcesRaw.charAt(j) != ',') {
+                        sb.append(sourcesRaw.charAt(j));
+                        j++;
+                    }
+                }  else {
+                    j = closingBracketIdx + 1;
+                }
 
-        for (String sourceRaw : splitSourcesRaw) {
-            sourceRaw = sourceRaw.trim();
-
-            // Extracted source can be a subquery, let's handle that
-            if (sourceRaw.toLowerCase(Locale.ROOT).startsWith("(select")) {
-
-                int closingBracketIdx = FindCorrespondingClosingBracketIndex.find(sourceRaw, 0, '(');
-                if (closingBracketIdx == sourceRaw.length() - 1) {
-                    // Column has no an alias
-                    resultQuery.addFromSource(new Source((new QueryParser()).parseQuery(sourceRaw.substring(1, sourceRaw.length() - 1), false), ""));
+                String subquery = sourcesRaw.substring(openingBracketIdx + 1, closingBracketIdx);
+                if (sb.length() > 0) {
+                    resultQuery.addFromSource(new Source((new QueryParser()).parseQuery(subquery, false), sb.toString().replaceAll(AliasRefinerRegExPattern, "")));
+                    sb.setLength(0);
                 } else {
-                    String alias = sourceRaw
-                            .substring(closingBracketIdx + 1)
-                            .replaceAll(AliasRefinerRegExPattern, "")
-                            .trim();
-
-                    String ss = sourceRaw.substring(1, closingBracketIdx);
-                    resultQuery.addFromSource(new Source((new QueryParser()).parseQuery(ss, false), alias));
+                    resultQuery.addFromSource(new Source((new QueryParser()).parseQuery(subquery, false), ""));
                 }
             } else {
-                int aliasSplitterIdx = sourceRaw.toLowerCase(Locale.ROOT).indexOf(" as ");
-
-                if (aliasSplitterIdx == -1)
-                    aliasSplitterIdx = sourceRaw.toLowerCase(Locale.ROOT).indexOf(" ");
-
-                if (aliasSplitterIdx == -1) {
-                    resultQuery.addFromSource(new Source(sourceRaw, ""));
-                } else {
-                    String sourceWithoutAlias = sourceRaw.substring(0, aliasSplitterIdx).trim();
-                    String sourceAlias = sourceRaw.substring(aliasSplitterIdx).trim().replaceAll(AliasRefinerRegExPattern, "");
-                    resultQuery.addFromSource(new Source(sourceWithoutAlias, sourceAlias));
+                while (j < sourcesRaw.length() && sourcesRaw.charAt(j) != ',') {
+                    sb.append(sourcesRaw.charAt(j));
+                    j++;
                 }
+
+                String tableName = "";
+                String tableAlias = "";
+                int aliasDelimiter = sb.indexOf(" ");
+                if (aliasDelimiter != -1) {
+                    tableName = sb.substring(0, aliasDelimiter).trim();
+                    tableAlias = sb.substring(aliasDelimiter + 1, sb.length()).replaceAll(AliasRefinerRegExPattern, "").trim();
+                } else {
+                    tableName = sb.toString().trim();
+                    tableAlias = "";
+                }
+
+                resultQuery.addFromSource(new Source(tableName, tableAlias));
+                sb.setLength(0);
             }
+
+            j++;
         }
     }
 
@@ -460,7 +516,7 @@ public class QueryParser {
         for (int i = 0; i < tokens.length; i++) {
             if (tokens[i].equalsIgnoreCase("on")) {
                 if (isSubquery) {
-                    if (tokens[0].equalsIgnoreCase("as")) {
+                    if (tokens[0].equalsIgnoreCase("as")) { // TODO: !!
                         // AS table_alias
                         res[1] = tokens[1];
                     } else {
@@ -468,7 +524,7 @@ public class QueryParser {
                         res[1] = tokens[0];
                     }
                 } else {
-                    if (tokens[1].equalsIgnoreCase("as")) {
+                    if (tokens[1].equalsIgnoreCase("as")) { // TODO: !!
                         // table_name as table_alias
                         res[0] = tokens[0];
                         res[1] = tokens[2];
@@ -563,15 +619,18 @@ public class QueryParser {
             }
         }
 
-        String[] columnNames = sb.delete(0, Keywords.groupBy.length()).toString().trim().split(", ");
+        String[] columnNames = sb.delete(0, Keywords.groupBy.length()).toString().trim().split(",");
         for (String columnName : columnNames) {
-            resultQuery.addGroupByColumn(columnName);
+            resultQuery.addGroupByColumn(columnName.trim());
         }
 
         return j;
     }
 
-    private int extractHavingStatements(int startIdx) {
+    private int extractHavingStatements(int startIdx) throws InvalidQueryFormatException {
+        if (resultQuery.getGroupByColumns().isEmpty())
+            throw new InvalidQueryFormatException("'HAVING' keyword reached without 'GROUP BY' statement");
+
         StringBuilder sb = new StringBuilder();
 
         int j = startIdx;
@@ -623,12 +682,23 @@ public class QueryParser {
             }
         }
 
-        String orderByConditions = sb.delete(0, Keywords.orderBy.length()).toString().trim();
-
-        System.out.println();
-//        resultQuery.addSortColumn();
+        String[] orderByConditions = sb.delete(0, Keywords.orderBy.length()).toString().trim().split(",");
+        addExtractedOrderByConditionsToResultQuery(orderByConditions);
 
         return j;
+    }
+
+    private void addExtractedOrderByConditionsToResultQuery(String[] orderByConditions) {
+        for (String orderByCondition : orderByConditions) {
+            int whitespaceIdx = orderByCondition.indexOf(" ");
+            if (whitespaceIdx == -1) {
+                resultQuery.addSortColumn(new Sort(orderByCondition, SortType.Asc));
+            } else {
+                String orderByColumn = orderByCondition.substring(0, whitespaceIdx);
+                String orderByDirection = orderByCondition.substring(whitespaceIdx + 1);
+                resultQuery.addSortColumn(new Sort(orderByColumn, orderByDirection.equalsIgnoreCase("asc") ? SortType.Asc : SortType.Desc));
+            }
+        }
     }
 
     private int extractLimitStatement(int startIdx) {

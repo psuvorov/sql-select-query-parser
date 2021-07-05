@@ -89,7 +89,7 @@ public class SimpleSelectTestCases {
         // one simple column and one nested query in select statement
 
         // Arrange
-        final String query = "select aa, (select avg(x) from table_with_x), cc from table1";
+        final String query = "select aa as AAA, (select avg(x) from table_with_x)as XXX, cc from table1";
 
         // Act
         Query res = QueryParser.parseQuery(query);

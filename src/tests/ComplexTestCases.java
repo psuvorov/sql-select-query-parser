@@ -14,7 +14,8 @@ public class ComplexTestCases {
         // Arrange
         final String query = "select * from Boards\n" +
                 "  left join Lists ON Boards.Id = Lists.BoardId\n" +
-                "  inner join (SELECT meta_value As Prenom, post_id FROM wp_postmeta right join Tab5 on t1 = t2 where id = 7) AS a ON wp_woocommerce_order_items.order_id = a.post_id\n" +
+                "  inner join (SELECT meta_value As Prenom, post_id FROM wp_postmeta " +
+                "                       right join Tab5 on t1 = t2 where id = 7) AS a ON wp_woocommerce_order_items.order_id = a.post_id\n" +
                 "  full join Cards ON Users.Id = Cards.LastModifiedById" +
                 "  where SalesPersonID IN (SELECT SalesPerson.BusinessEntityID\n" +
                 "               FROM   sales.SalesPerson\n" +
@@ -29,7 +30,7 @@ public class ComplexTestCases {
         assertEquals(1, res.getFromSources().size());
         assertEquals(3, res.getJoins().size());
 
-        assertEquals(2, res.getJoins().get(1).getReferencedSubquery().getFromSources().size());
+        assertEquals(1, res.getJoins().get(1).getReferencedSubquery().getFromSources().size());
 
         // TODO: continue to break up 'where' section
     }
@@ -59,6 +60,8 @@ public class ComplexTestCases {
         Query res = QueryParser.parseQuery(query);
 
         // Assert
+
+
     }
 
 

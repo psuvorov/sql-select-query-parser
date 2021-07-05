@@ -62,7 +62,7 @@ public class MultipleSourceTestCases {
     @Test
     public void query04() throws InvalidQueryFormatException {
         // Assert
-        String query = "select * from (select boards.* from Boards) boards, Lists as LiSt";
+        String query = "select * from (select boards.* from Boards) boards,Lists as LiSt";
 
         // Act
         Query res = QueryParser.parseQuery(query);
@@ -110,6 +110,20 @@ public class MultipleSourceTestCases {
 
         // Arrange
         assertEquals(3, res.getFromSources().size());
+    }
+
+    @Test
+    public void query09() throws InvalidQueryFormatException {
+        // Assert
+        String query = "SELECT\n" +
+                "  count       (     b.Username   )\n" +
+                "FROM (select * from Users)b";
+
+        // Act
+        Query res = QueryParser.parseQuery(query);
+
+        // Arrange
+        assertEquals(1, res.getFromSources().size());
     }
 
 }
