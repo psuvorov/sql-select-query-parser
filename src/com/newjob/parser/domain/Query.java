@@ -1,5 +1,6 @@
 package com.newjob.parser.domain;
 
+import com.newjob.parser.domain.enums.TermType;
 import com.newjob.parser.domain.terms.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -97,33 +98,116 @@ public class Query {
         return offset;
     }
 
-    public String getInfo() {
-
-        // TODO: move outside
+    private String getInfo(int paddingLevel) {
         String spr = System.lineSeparator();
 
         StringBuilder res = new StringBuilder();
-        res.append("-------------------------------------").append(spr);
-        res.append("Overall query info:").append(spr);
+        res.append("\t".repeat(paddingLevel)).append("_____________________________________").append(spr);
+        res.append("\t".repeat(paddingLevel)).append("OVERALL QUERY INFO:").append(spr);
+        paddingLevel++;
 
-        res.append("Columns:").append(spr);
-//        for (String columnName : this.columns) {
-//            res.append("\t").append(columnName);
-//        }
-        res.append(spr);
+        // --- COLUMNS ---
+        res.append("\t".repeat(paddingLevel)).append("COLUMNS:").append(spr);
+        for (Column column : this.getColumns()) {
+            if (column.getType() == TermType.SimpleTerm) {
+                res.append("\t".repeat(paddingLevel + 1)).append(column.getSimpleColumnTermName());
+                if (!column.getAlias().isEmpty()) {
+                    res.append(" AS ").append(column.getAlias());
+                }
+                res.append(spr);
+            } else {
+                Query subQuery = column.getSubQuery();
+                res.append(subQuery.getInfo(paddingLevel + 1));
+            }
+        }
+
+        // --- SOURCES ---
+        res.append("\t".repeat(paddingLevel)).append("SOURCES:").append(spr);
+        for (Source source : this.getFromSources()) {
+            if (source.getType() == TermType.SimpleTerm) {
+                res.append("\t".repeat(paddingLevel + 1)).append("Table Name: ").append(source.getSimpleSourceTableName());
+                if (!source.getAlias().isEmpty()) {
+                    res.append(" AS ").append(source.getAlias());
+                }
+                res.append(spr);
+            } else {
+                Query subQuery = source.getSubQuery();
+                res.append("\t".repeat(paddingLevel + 1)).append("SubQuery");
+                if (!source.getAlias().isEmpty()) {
+                    res.append(" AS ").append(source.getAlias());
+                }
+                res.append(":").append(spr);
+                res.append(subQuery.getInfo(paddingLevel + 1));
+            }
+        }
+
+        // --- JOINS ---
+        if (!this.getJoins().isEmpty())
+            res.append("\t".repeat(paddingLevel)).append("JOINS:").append(spr);
+        for (Join join : this.getJoins()) {
+            res.append("\t".repeat(paddingLevel + 1)).append("Join Type: ").append(join.getJoinType()).append(spr);
+            if (join.getReferencedTermType() == TermType.SimpleTerm) {
+                res.append("\t".repeat(paddingLevel + 1)).append("Referenced Table: ").append(join.getReferencedTableName());
+                if (!join.getReferencedAlias().isEmpty()) {
+                    res.append(" AS ").append(join.getReferencedAlias());
+                }
+                res.append(spr).append(spr);
+            } else {
+                Query subQuery = join.getReferencedSubquery();
+                res.append("\t".repeat(paddingLevel + 1)).append("SubQuery");
+                if (!join.getReferencedAlias().isEmpty()) {
+                    res.append(" AS ").append(join.getReferencedAlias());
+                }
+                res.append(":").append(spr);
+                res.append(subQuery.getInfo(paddingLevel + 1));
+            }
+        }
 
 
-        res.append("Limit:").append(spr);
-        res.append(limit).append(spr);
+        // --- WHERE SECTION ---
+        if (this.getWhereSection() != null) {
+            res.append("\t".repeat(paddingLevel)).append("WHERE:").append(spr);
+            res.append("\t".repeat(paddingLevel + 1)).append(this.getWhereSection().getWhereClause()).append(spr);
+        }
 
-        res.append("Offset:").append(spr);
-        res.append(offset).append(spr);
+        // --- GROUP BY SECTION ---
+        if (!this.getGroupByColumns().isEmpty()) {
+            res.append("\t".repeat(paddingLevel)).append("GROUP BY:").append(spr);
+
+            for (String groupByColumn : this.getGroupByColumns()) {
+                res.append("\t".repeat(paddingLevel + 1)).append(groupByColumn).append(spr);
+            }
+        }
+
+        // --- HAVING SECTION ---
+        if (this.getHavingSection() != null) {
+            res.append("\t".repeat(paddingLevel)).append("HAVING:").append(spr);
+            res.append("\t".repeat(paddingLevel + 1)).append(this.getHavingSection()).append(spr);
+        }
+
+        // --- ORDER BY SECTION ---
+        if (!this.getSortColumns().isEmpty()) {
+            res.append("\t".repeat(paddingLevel)).append("ORDER BY:").append(spr);
+            for (Sort sort : this.getSortColumns()) {
+                res.append("\t".repeat(paddingLevel + 1)).append(sort.getColumn()).append(" ").append(sort.getSortType()).append(spr);
+            }
+        }
+
+        // --- LIMIT AND OFFSET SECTION ---
+        if (this.getLimit() != null)
+            res.append("\t".repeat(paddingLevel)).append("LIMIT:").append(this.getLimit().intValue()).append(spr);
+
+        if (this.getOffset() != null)
+            res.append("\t".repeat(paddingLevel)).append("OFFSET:").append(this.getOffset().intValue()).append(spr);
+
+
+        res.append("\t".repeat(paddingLevel - 1)).append("-------------------------------------").append(spr);
 
         return res.toString();
     }
 
     @Override
     public String toString() {
-        return getInfo();
+        return getInfo(0);
     }
 }
