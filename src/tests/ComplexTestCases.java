@@ -78,7 +78,15 @@ public class ComplexTestCases {
                 "\tcountry.country_name_eng,\n" +
                 "\tSUM(CASE WHEN call.id IS NOT NULL THEN 1 ELSE 0 END) AS calls,\n" +
                 "\tAVG(ISNULL(DATEDIFF(SECOND, call.start_time, call.end_time),0)) AS avg_difference\n" +
-                "FROM country ";
+                "FROM country \n" +
+                "LEFT JOIN city ON city.country_id = country.id\n" +
+                "LEFT JOIN customer ON city.id = customer.city_id\n" +
+                "LEFT JOIN call ON call.customer_id = customer.id\n" +
+                "GROUP BY \n" +
+                "\tcountry.id,\n" +
+                "\tcountry.country_name_eng\n" +
+                "HAVING AVG(ISNULL(DATEDIFF(SECOND, call.start_time, call.end_time),0)) > (SELECT AVG(DATEDIFF(SECOND, call.start_time, call.end_time)) FROM call)\n" +
+                "ORDER BY calls DESC, country.id ASC;";
 
         // Act
         Query res = QueryParser.parseQuery(query);
@@ -90,6 +98,33 @@ public class ComplexTestCases {
         assertEquals("AVG(ISNULL(DATEDIFF(SECOND, call.start_time, call.end_time) ,0))", res.getColumns().get(2).getSimpleColumnTermName());
         assertEquals("avg_difference", res.getColumns().get(2).getAlias());
 
+        assertEquals("country", res.getFromSources().get(0).getSimpleSourceTableName());
+
+        assertEquals("city", res.getJoins().get(0).getReferencedTableName());
+        assertEquals("", res.getJoins().get(0).getReferencedAlias());
+        assertEquals("city.country_id = country.id", res.getJoins().get(0).getJoinClause());
+        assertEquals(JoinType.Left, res.getJoins().get(0).getJoinType());
+
+        assertEquals("customer", res.getJoins().get(1).getReferencedTableName());
+        assertEquals("", res.getJoins().get(1).getReferencedAlias());
+        assertEquals("city.id = customer.city_id", res.getJoins().get(1).getJoinClause());
+        assertEquals(JoinType.Left, res.getJoins().get(1).getJoinType());
+
+        assertEquals("call", res.getJoins().get(2).getReferencedTableName());
+        assertEquals("", res.getJoins().get(2).getReferencedAlias());
+        assertEquals("call.customer_id = customer.id", res.getJoins().get(2).getJoinClause());
+        assertEquals(JoinType.Left, res.getJoins().get(2).getJoinType());
+
+        assertEquals("country.id", res.getGroupByColumns().get(0));
+        assertEquals("country.country_name_eng", res.getGroupByColumns().get(1));
+
+        assertEquals("AVG(ISNULL(DATEDIFF(SECOND, call.start_time, call.end_time) ,0)) > (SELECT AVG(DATEDIFF(SECOND, call.start_time, call.end_time)) FROM call)", res.getHavingSection().getHavingClause());
+
+        assertEquals("calls", res.getSortColumns().get(0).getColumn());
+        assertEquals(SortType.Desc, res.getSortColumns().get(0).getSortType());
+
+        assertEquals("country.id", res.getSortColumns().get(1).getColumn());
+        assertEquals(SortType.Asc, res.getSortColumns().get(1).getSortType());
     }
 
 

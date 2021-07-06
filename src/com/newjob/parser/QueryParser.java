@@ -70,8 +70,6 @@ public class QueryParser {
 //                .replace("--", "") // TODO: get rid off all comments
                 .replace("( ", "(") // proper brackets position
                 .replace(" )", ")")
-//                .replace(", ", ",")
-//                .replace(" ,", ",")
                 .replace(";", "");
 
         deleteExtraSpaceNearComma();
@@ -114,11 +112,9 @@ public class QueryParser {
             if (sb.charAt(i - 1) == ',' && sb.charAt(i) == ' ') {
                 sb.delete(i, i + 1);
             }
-
         }
 
         rawQuery = sb.toString();
-
     }
 
     private void replaceSingleJoinWithInnerJoinKeyword(StringBuilder sb, int i) {
@@ -157,6 +153,7 @@ public class QueryParser {
         int startIdx = Keywords.select.length() + 1;
 
         int sourceStartIdx = extractColumns(startIdx);
+
         int nextStatementStartIdx = extractSources(sourceStartIdx + Keywords.from.length() + 1);
 
         // In case it's a simple query (with no keywords after 'from' term, please stop here)
@@ -201,10 +198,8 @@ public class QueryParser {
         }
 
         if (nextKeywordAfterSourceSection.equalsIgnoreCase(Keywords.offset)) {
-            nextStatementStartIdx = extractOffsetStatement(nextStatementStartIdx);
+            extractOffsetStatement(nextStatementStartIdx);
         }
-
-        System.out.println();
     }
 
     // Find all select members respective to the current level select statement
@@ -236,6 +231,7 @@ public class QueryParser {
         String columnsRawLowerCased = columnsRaw.toLowerCase(Locale.ROOT);
         int j = 0;
         var sb = new StringBuilder();
+
         while (j < columnsRaw.length()) {
             if (columnsRawLowerCased.startsWith("(select", j)) {
                 int openingBracketIdx = j;
@@ -308,6 +304,9 @@ public class QueryParser {
     }
 
     private int extractSources(int startIdx) throws InvalidQueryFormatException {
+        if (resultQuery.getColumns().isEmpty())
+            throw new InvalidQueryFormatException("Malformed query, 'SELECT' keyword is missing");
+
         StringBuilder sb = new StringBuilder();
 
         int j = startIdx;
@@ -375,55 +374,68 @@ public class QueryParser {
         var sb = new StringBuilder();
         while (j < sourcesRaw.length()) {
             if (sourcesRawLowerCased.startsWith("(select", j)) {
-                int openingBracketIdx = j;
-                int closingBracketIdx = FindCorrespondingClosingBracketIndex.find(sourcesRaw, openingBracketIdx, '(');
-                if (closingBracketIdx + 1 < sourcesRaw.length() && sourcesRaw.charAt(closingBracketIdx + 1) == ' ') {
-                    j = closingBracketIdx + 2;
-                    // Collect query alias
-                    while (j < sourcesRaw.length() && sourcesRaw.charAt(j) != ',') {
-                        sb.append(sourcesRaw.charAt(j));
-                        j++;
-                    }
-                }  else {
-                    j = closingBracketIdx + 1;
-                }
-
-                String subquery = sourcesRaw.substring(openingBracketIdx + 1, closingBracketIdx);
-                if (sb.length() > 0) {
-                    resultQuery.addFromSource(new Source((new QueryParser()).parseQuery(subquery, false), sb.toString().replaceAll(AliasRefinerRegExPattern, "")));
-                    sb.setLength(0);
-                } else {
-                    resultQuery.addFromSource(new Source((new QueryParser()).parseQuery(subquery, false), ""));
-                }
+                j = addExtractedSubquery(sourcesRaw, j, sb);
             } else {
-                while (j < sourcesRaw.length() && sourcesRaw.charAt(j) != ',') {
-                    sb.append(sourcesRaw.charAt(j));
-                    j++;
-                }
-
-                String tableName = "";
-                String tableAlias = "";
-                int aliasDelimiter = sb.indexOf(" ");
-                if (aliasDelimiter != -1) {
-                    tableName = sb.substring(0, aliasDelimiter).trim();
-                    tableAlias = sb.substring(aliasDelimiter + 1, sb.length()).replaceAll(AliasRefinerRegExPattern, "").trim();
-                } else {
-                    tableName = sb.toString().trim();
-                    tableAlias = "";
-                }
-
-                resultQuery.addFromSource(new Source(tableName, tableAlias));
-                sb.setLength(0);
+                j = addExtractedColumn(sourcesRaw, j, sb);
             }
-
             j++;
         }
     }
 
-    private int extractJoinStatements(int startIdx) {
-        int j = startIdx;
-        while (j < rawQuery.length()) {
+    private int addExtractedSubquery(String sourcesRaw, int j, StringBuilder sb) throws InvalidQueryFormatException {
+        int openingBracketIdx = j;
+        int closingBracketIdx = FindCorrespondingClosingBracketIndex.find(sourcesRaw, openingBracketIdx, '(');
+        if (closingBracketIdx + 1 < sourcesRaw.length() && sourcesRaw.charAt(closingBracketIdx + 1) == ' ') {
+            j = closingBracketIdx + 2;
+            // Collect query alias
+            while (j < sourcesRaw.length() && sourcesRaw.charAt(j) != ',') {
+                sb.append(sourcesRaw.charAt(j));
+                j++;
+            }
+        }  else {
+            j = closingBracketIdx + 1;
+        }
 
+        String subquery = sourcesRaw.substring(openingBracketIdx + 1, closingBracketIdx);
+        if (sb.length() > 0) {
+            resultQuery.addFromSource(new Source((new QueryParser()).parseQuery(subquery, false), sb.toString().replaceAll(AliasRefinerRegExPattern, "")));
+            sb.setLength(0);
+        } else {
+            resultQuery.addFromSource(new Source((new QueryParser()).parseQuery(subquery, false), ""));
+        }
+
+        return j;
+    }
+
+    private int addExtractedColumn(String sourcesRaw, int j, StringBuilder sb) {
+        while (j < sourcesRaw.length() && sourcesRaw.charAt(j) != ',') {
+            sb.append(sourcesRaw.charAt(j));
+            j++;
+        }
+
+        String tableName = "";
+        String tableAlias = "";
+        int aliasDelimiter = sb.indexOf(" ");
+        if (aliasDelimiter != -1) {
+            tableName = sb.substring(0, aliasDelimiter).trim();
+            tableAlias = sb.substring(aliasDelimiter + 1, sb.length()).replaceAll(AliasRefinerRegExPattern, "").trim();
+        } else {
+            tableName = sb.toString().trim();
+            tableAlias = "";
+        }
+
+        resultQuery.addFromSource(new Source(tableName, tableAlias));
+        sb.setLength(0);
+        return j;
+    }
+
+    private int extractJoinStatements(int startIdx) throws InvalidQueryFormatException {
+        if (resultQuery.getColumns().isEmpty() || resultQuery.getFromSources().isEmpty())
+            throw new InvalidQueryFormatException("Malformed query, 'SELECT' and/or 'FROM' keyword is missing");
+
+        int j = startIdx;
+
+        while (j < rawQuery.length()) {
             if (j + Keywords.innerJoin.length() >= rawQuery.length() || rawQuery.substring(j, j + Keywords.innerJoin.length()).equalsIgnoreCase(Keywords.innerJoin)) {
                 String wholeJoinStatement = getWholeJoinStatement(j).trim();
                 addExtractedJoinStatements(JoinType.Inner, Keywords.innerJoin, wholeJoinStatement);
@@ -501,18 +513,12 @@ public class QueryParser {
         return sb.toString();
     }
 
-    private void addExtractedJoinStatements(JoinType joinType, String joinKeyword, String wholeJoinStatement) {
+    private void addExtractedJoinStatements(JoinType joinType, String joinKeyword, String wholeJoinStatement) throws InvalidQueryFormatException {
         String joinStatementWithoutJoin = wholeJoinStatement.substring(joinKeyword.length() + 1);
 
         if (joinStatementWithoutJoin.toLowerCase(Locale.ROOT).startsWith("(select")) {
             // We've got a subquery
-            try {
-                addDataFromJoinWithSubquery(joinType, joinStatementWithoutJoin);
-            } catch (InvalidQueryFormatException e) {
-                // TODO: !!
-                e.printStackTrace();
-                System.exit(0);
-            }
+            addDataFromJoinWithSubquery(joinType, joinStatementWithoutJoin);
         } else {
             addDataFromJoin(joinType, joinStatementWithoutJoin);
         }
@@ -524,16 +530,16 @@ public class QueryParser {
 
         String joinStatementWithoutSubquery = joinStatementWithoutJoin.substring(subquery.length() + 2);
 
-        String[] restResJoinItems = addRestResJoinItems(joinStatementWithoutSubquery, true);
+        String[] restResJoinItems = addRestJoinItems(joinStatementWithoutSubquery, true);
         resultQuery.addJoin(new Join(joinType, new QueryParser().parseQuery(subquery, false), restResJoinItems[1], restResJoinItems[2]));
     }
 
     private void addDataFromJoin(JoinType joinType, String joinStatementWithoutJoin) {
-        String[] restResJoinItems = addRestResJoinItems(joinStatementWithoutJoin, false);
+        String[] restResJoinItems = addRestJoinItems(joinStatementWithoutJoin, false);
         resultQuery.addJoin(new Join(joinType, restResJoinItems[0], restResJoinItems[1], restResJoinItems[2]));
     }
 
-    private String[] addRestResJoinItems(String stringToExtract, boolean isSubquery) {
+    private String[] addRestJoinItems(String stringToExtract, boolean isSubquery) {
         String[] tokens = stringToExtract.trim().split(" ");
 
         String[] res = new String[3]; // Referenced Table Name, Alias, Join clause
@@ -565,8 +571,10 @@ public class QueryParser {
         return res;
     }
 
+    private int extractWhereStatements(int startIdx) throws InvalidQueryFormatException {
+        if (resultQuery.getColumns().isEmpty() || resultQuery.getFromSources().isEmpty())
+            throw new InvalidQueryFormatException("Malformed query, 'SELECT' and/or 'FROM' keyword is missing");
 
-    private int extractWhereStatements(int startIdx) {
         StringBuilder sb = new StringBuilder();
 
         int j = startIdx;
@@ -606,7 +614,10 @@ public class QueryParser {
         return j;
     }
 
-    private int extractGroupByStatements(int startIdx) {
+    private int extractGroupByStatements(int startIdx) throws InvalidQueryFormatException {
+        if (resultQuery.getColumns().isEmpty() || resultQuery.getFromSources().isEmpty())
+            throw new InvalidQueryFormatException("Malformed query, 'SELECT' and/or 'FROM' keyword is missing");
+
         StringBuilder sb = new StringBuilder();
 
         int j = startIdx;
@@ -642,6 +653,8 @@ public class QueryParser {
     }
 
     private int extractHavingStatements(int startIdx) throws InvalidQueryFormatException {
+        if (resultQuery.getColumns().isEmpty() || resultQuery.getFromSources().isEmpty())
+            throw new InvalidQueryFormatException("Malformed query, 'SELECT' and/or 'FROM' keyword is missing");
         if (resultQuery.getGroupByColumns().isEmpty())
             throw new InvalidQueryFormatException("'HAVING' keyword reached without 'GROUP BY' statement");
 
@@ -715,7 +728,10 @@ public class QueryParser {
         }
     }
 
-    private int extractLimitStatement(int startIdx) {
+    private int extractLimitStatement(int startIdx) throws InvalidQueryFormatException {
+        if (resultQuery.getColumns().isEmpty() || resultQuery.getFromSources().isEmpty())
+            throw new InvalidQueryFormatException("Malformed query, 'SELECT' and/or 'FROM' keyword is missing");
+
         StringBuilder sb = new StringBuilder();
 
         int j = startIdx;
@@ -736,13 +752,13 @@ public class QueryParser {
         String limitValue = sb.delete(0, Keywords.limit.length()).toString().trim();
         resultQuery.setLimit(Integer.parseInt(limitValue));
 
-        System.out.println();
-//        resultQuery.addSortColumn();
-
         return j;
     }
 
-    private int extractOffsetStatement(int startIdx) {
+    private int extractOffsetStatement(int startIdx) throws InvalidQueryFormatException {
+        if (resultQuery.getColumns().isEmpty() || resultQuery.getFromSources().isEmpty())
+            throw new InvalidQueryFormatException("Malformed query, 'SELECT' and/or 'FROM' keyword is missing");
+
         StringBuilder sb = new StringBuilder();
 
         int j = startIdx;
@@ -758,8 +774,6 @@ public class QueryParser {
 
         String offsetValue = sb.delete(0, Keywords.offset.length()).toString().trim();
         resultQuery.setOffset(Integer.parseInt(offsetValue));
-
-        System.out.println();
 
         return j;
     }
