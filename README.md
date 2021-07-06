@@ -2,7 +2,9 @@
 
 Creates overall SELECT query info like:
 
-```select aa, bb, (select avg(x) from table_with_x) from my_table```
+```sql 
+select aa, bb, (select avg(x) from table_with_x) from my_table
+```
 
 ```_____________________________________
 OVERALL QUERY INFO:
@@ -22,7 +24,7 @@ OVERALL QUERY INFO:
 ```
 
 
-```
+```sql
   select * from Boards
   left join Lists LISTS ON Boards.Id = Lists.BoardId
   right join Users ON Lists.LastModifiedById = Users.Id
@@ -81,7 +83,7 @@ OVERALL QUERY INFO:
 ```
 
 
-```
+```sql
   SELECT Products.*
 	FROM Products, NotProducts, NotProductsAtAll
 	     INNER JOIN 
